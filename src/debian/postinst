@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+if [ "${1:-}" = configure ]; then
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  systemctl enable mbp132-update-health.service >/dev/null 2>&1 || true
+  if [ -f /var/lib/mbp132-support/attempted ]; then
+    /usr/lib/mbp132-support/fallback protect || echo 'MBP13,2: fallback protection unavailable. Check: mbp132-support status'
+  fi
+  echo 'MBP13,2 v0.5 installed. Existing working drivers left intact.'
+  echo 'DKMS already auto-rebuilds for new kernels; update monitor now checks results.'
+  echo 'Run mbp132-support status for the health report (not proof of hardware runtime).'
+fi

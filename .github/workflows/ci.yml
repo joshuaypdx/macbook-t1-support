@@ -1,0 +1,28 @@
+name: Check installer package
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Verify source, beta package, and docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Check source scripts (offline)
+        run: python3 src/tests/test_package.py
+      - name: Verify downloadable package matches source
+        run: python3 tests/verify-release.py
+      - name: Check Markdown and issue templates are present
+        run: |
+          test -s README.md
+          test -s NOTICE.md
+          test -s docs/INSTALL.md
+          test -s .github/ISSUE_TEMPLATE/bug-report.yml
+          test -s docs/EGPU.md

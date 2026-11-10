@@ -1,0 +1,28 @@
+name: "Support another Mac model"
+description: "Help us decide which other T1 MacBook to test next."
+title: "[Model request] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: "**Thanks!** Our installer currently refuses all models other than MacBookPro13,2. This form is a request for future support, **not** permission to force an install."
+  - type: input
+    id: model
+    attributes:
+      label: Exact Mac model identifier
+      description: "Try the Terminal command: cat /sys/class/dmi/id/product_name"
+      placeholder: "MacBookPro14,2"
+    validations:
+      required: true
+  - type: input
+    id: ubuntu
+    attributes:
+      label: Ubuntu version and kernel (if known)
+      placeholder: "Ubuntu 26.04.1; 7.0.0-43-generic"
+  - type: textarea
+    id: current-state
+    attributes:
+      label: What works and what doesn't today?
+      placeholder: "Keyboard works, but sound is missing ..."
+    validations:
+      required: true

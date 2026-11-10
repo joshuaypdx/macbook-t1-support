@@ -1,0 +1,3 @@
+// Read-only inspection AFTER a package transaction. DKMS handles builds.
+// Never fail an Ubuntu update just because our monitor has a problem.
+DPkg::Post-Invoke { "/usr/lib/mbp132-support/update-guard --apt || true"; };

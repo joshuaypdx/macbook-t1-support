@@ -1,0 +1,69 @@
+MacBookPro13,2 Ubuntu 26.04 LTS support, v0.5.0 beta
+====================================================
+
+This package extends the single-user-tested v0.4.0 integration with:
+- APT post-transaction read-only DKMS verification and a boot health report;
+- an APT::NeverAutoRemove rule protecting kernel 7.0.0-30-generic (the one
+  successfully tested with all core hardware on a real MacBookPro13,2);
+- an optional repair command, using installed DKMS source, that refuses
+  to build if the exact matching Ubuntu patched kernel source is unavailable;
+- a fix for v0.4's end-of-script unbound-local-variable cleanup error;
+- immutable Git SHA pins for the three upstream code and firmware snapshots.
+
+The upgrade from v0.4.0 automatically sets up monitoring and protects the
+working kernel if it is present. It DOES NOT reinstall working drivers or
+change EFI, GRUB, suspend, Thunderbolt or partition configuration.
+
+IMPORTANT: "DKMS installed" means only that a driver built and was installed.
+It DOES NOT guarantee that newer kernels safely initialize the audio codec,
+Touch Bar or Wi-Fi at runtime. The audio driver patches Ubuntu's kernel HDA
+interfaces and its kernel 7 upstream patch is still unmerged. Kernels after
+7.0.0-30-generic must be tested. APT will install new kernels normally and
+may boot them by default. If problems occur, boot the preserved 7.0.0-30
+fallback from GRUB's Advanced options (if GRUB provides that menu). It is
+not a promise of automatic rollback. The user must still back up data.
+
+Existing v0.4 users:
+  Install v0.5 .deb. There is NO need to run 'install' again.
+  Check only if desired: mbp132-support status
+
+Fresh Ubuntu 26.04 users (MacBookPro13,2 only):
+  sudo mbp132-support install
+  Reboot, then check Wi-Fi, sound, microphone, camera and Touch Bar.
+
+If a supported 7.0.0-generic kernel reports missing DKMS modules:
+  sudo mbp132-support repair
+
+Never force 'repair' if a new kernel has boot or runtime problems: instead
+boot the known-good version. Versions outside the 7.0 kernel family are
+explicitly flagged as unsupported, not patched automatically.
+
+What changes:
+  - Sources under /usr/src/ (DKMS), /var/lib/mbp132-support/ (backups)
+  - /lib/firmware/brcm/brcmfmac43602-pcie.txt (community Wi-Fi NVRAM)
+  - APT monitoring in /etc/apt/apt.conf.d/, one generated fallback rule
+  - A boot status service and logs (read-only checks)
+  - /etc/modprobe.d/, /etc/modules-load.d/, /etc/udev/rules.d/
+  - Initramfs rebuilt for the targeted kernel at original driver install
+
+No automatic module recompilation logic is reinvented: Ubuntu's DKMS kernel
+hooks handle normal automatic rebuilds when the package's dkms.conf
+AUTOINSTALL is enabled and matching headers/sources are installed.
+
+Attribution (upstream sources fetched ONLY at exact immutable commits):
+  Audio: duzelli/snd_hda_macbookpro, commit
+     3414707841e7a518707be4748cd8787794e19045
+     PR against davidjo/snd_hda_macbookpro (#216); license upstream.
+  Touch Bar: AJ-dev-i60/t1-touchbar, commit
+     20d65c7b0fe6d05ea9734f869b27384a62de5109
+     driver GPL-2.0; installer/docs as described upstream.
+  Wi-Fi: DeyAgrO/macbook-pro-13-2-linux, commit
+     c005707321186f6ac6ac81fbe577226189568f69
+     community-distributed NVRAM derived from Apple hardware. Check licensing
+     and applicable RF compliance before redistributing firmware.
+
+This is a community integrator, not endorsed by Ubuntu or Apple. GPL and
+upstream licensing must be respected in any redistribution. It has been
+structurally tested off-device but v0.5 update behavior is not yet hardware-
+validated. The first end-to-end MacBookPro13,2 hardware success was with v0.4
+on Ubuntu 26.04.1, kernel 7.0.0-30-generic.

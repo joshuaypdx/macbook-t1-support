@@ -1,0 +1,34 @@
+name: "I need help"
+description: "Ask a question about installing or using MacBook T1 Support."
+title: "[Help] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: "**New to Linux? You're welcome here.** Describe the screen or step where you got stuck. Please avoid sharing passwords or private device details."
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where did you get stuck?
+      options:
+        - "Downloading the installer"
+        - "Installing the .deb"
+        - "Running the compatibility check"
+        - "Running INSTALL"
+        - "After reboot"
+        - "Understanding an error message"
+        - "Other question"
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: What's your question?
+      description: "No need to use technical language."
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Mac model (if known)
+      placeholder: "MacBookPro13,2"

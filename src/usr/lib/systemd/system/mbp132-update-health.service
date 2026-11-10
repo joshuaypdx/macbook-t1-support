@@ -1,0 +1,11 @@
+[Unit]
+Description=Read-only Apple MacBookPro13,2 DKMS health report
+After=multi-user.target
+ConditionPathExists=/var/lib/mbp132-support/attempted
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/mbp132-support/update-guard --boot
+
+[Install]
+WantedBy=multi-user.target

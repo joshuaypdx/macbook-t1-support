@@ -1,0 +1,73 @@
+name: "Something isn't working"
+description: "Report a bug in everyday language. Linux expertise not required."
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **We're glad you're here.** Tell us what happened in your own words.
+        **Privacy:** Don't share serial numbers, full unredacted logs, passwords, disk UUIDs or Wi-Fi MAC addresses.
+  - type: dropdown
+    id: model
+    attributes:
+      label: Which Mac do you have?
+      options:
+        - "MacBookPro13,2 (13-inch Late 2016 Touch Bar)"
+        - "Another MacBook Pro"
+        - "Not sure"
+    validations:
+      required: true
+  - type: input
+    id: ubuntu
+    attributes:
+      label: Ubuntu version
+      description: "Example: Ubuntu 26.04.1. You can check Settings → About."
+      placeholder: "Ubuntu 26.04.1"
+    validations:
+      required: true
+  - type: input
+    id: kernel
+    attributes:
+      label: Kernel (optional)
+      description: "In Terminal, type uname -r and copy the result."
+      placeholder: "7.0.0-43-generic"
+  - type: dropdown
+    id: area
+    attributes:
+      label: What isn't working?
+      options:
+        - "Install / compatibility check"
+        - "Built-in speakers / sound"
+        - "Touch Bar / function keys"
+        - "Wi-Fi"
+        - "Keyboard / trackpad"
+        - "Boot / startup"
+        - "Something else"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: "What did you try, and what did you see? A screen photo is fine if it contains no personal info."
+      placeholder: "I installed the package, restarted, and ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      placeholder: "I expected the internal speakers to work."
+  - type: textarea
+    id: errors
+    attributes:
+      label: Any error messages? (optional)
+      description: "Copy only relevant lines. Please remove identifying information."
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before posting
+      options:
+        - label: "I have checked that my report does not include passwords, serial numbers, personal files or unredacted device identifiers."
+          required: true

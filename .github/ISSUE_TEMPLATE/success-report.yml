@@ -1,0 +1,36 @@
+name: "It works on my Mac!"
+description: "Share a successful install to help establish compatibility."
+title: "[Success] "
+labels: ["documentation"]
+body:
+  - type: input
+    id: model
+    attributes:
+      label: Mac model
+      description: "Find this with cat /sys/class/dmi/id/product_name if needed. No serial numbers, please."
+      placeholder: "MacBookPro13,2"
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Ubuntu version / kernel
+      placeholder: "Ubuntu 26.04.1; 7.0.0-43-generic"
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What did you actually test?
+      options:
+        - label: "Built-in speakers played audio"
+        - label: "Microphone recorded sound"
+        - label: "Touch Bar/function keys responded"
+        - label: "Wi-Fi connected to a network"
+        - label: "Keyboard and trackpad worked"
+        - label: "Camera worked"
+  - type: textarea
+    id: notes
+    attributes:
+      label: Any observations?
+      description: "Do not include serial numbers, MAC addresses or unredacted logs."

@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+*.swp
+.idea/
+.vscode/
+*.tmp
+build/
+dist/
+# Keep the deliberately versioned and tested .deb in packages/
