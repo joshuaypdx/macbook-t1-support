@@ -1,6 +1,6 @@
 # MacBook T1 Support
 
-**Making Ubuntu feel at home on a 2016 MacBook Pro.** 🍎🐧
+**Making Ubuntu feel at home on a 2016 MacBook Pro.**
 
 ![Beta](https://img.shields.io/badge/status-public%20beta-orange) ![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420) ![Tested Mac](https://img.shields.io/badge/tested-MacBookPro13%2C2-2472A3)
 
@@ -9,7 +9,7 @@
 > [!IMPORTANT]
 > **Beta, and currently only for one Mac model.** The installer checks for **MacBookPro13,2**, the **13-inch Late 2016 MacBook Pro with Touch Bar (T1)**. It refuses other models. The name describes our long-term goal, **not** broad T1 compatibility today. This is not an Apple or Ubuntu product.
 
-## 👋 Start here (no Linux expertise required)
+## Start here (no Linux expertise required)
 
 **What you need:** Ubuntu **26.04 LTS**, a **MacBookPro13,2**, an internet connection, and a backup of important files. We tested the installer on a fresh, updated Ubuntu 26.04.1 installation running kernel `7.0.0-43-generic` on one real MacBookPro13,2.
 
@@ -49,17 +49,49 @@ When the installer says the steps have completed, **reboot**. Keep external GPUs
 
 ### 5. Test the hardware
 
-Try your MacBook's **built-in speakers**, **microphone**, **Touch Bar/function keys**, **trackpad**, and **Wi-Fi**. Some functions, including the webcam, are not yet comprehensively verified on fresh installations. Then run:
+Try your MacBook's **built-in speakers**, **microphone**, **Touch Bar/function keys**, **trackpad**, and **Wi-Fi**. The camera and microphone have been verified on the test Mac, but broader testing on other installations is still needed. Then run:
 
 ```bash
 mbp132-support status
 ```
 
-A known beta issue can make this status display look alarming even while the hardware works. See [Known issues](docs/KNOWN_ISSUES.md) before attempting a repair. **Do not reinstall repeatedly to clear a warning.**
+**Known limitation:** The v0.5.0 status utility may incorrectly report driver problems even when the hardware is working. Verify hardware functionality directly before attempting repairs. See [Known issues](docs/KNOWN_ISSUES.md) for details.
+
 
 **That's it.** You should now have a more capable Ubuntu MacBook, without configuring EFI or GRUB yourself.
 
 [Detailed installation help](docs/INSTALL.md) · [Troubleshooting](docs/TROUBLESHOOTING.md) · [Supported computers](docs/COMPATIBILITY.md)
+
+---
+
+## MacBook compatibility and testing
+
+MacBook T1 Support is being developed for Apple's 2016–2017 MacBook Pro models equipped with the T1 chip.
+
+**Currently, only MacBookPro13,2 is supported by the installer.** Other T1 models are candidates for future support, but have not been tested with this package.
+
+| MacBook Pro model | Model identifier | Status |
+| --- | --- | --- |
+| 13-inch Late 2016, Touch Bar | MacBookPro13,2 | ✅ Tested and verified |
+| 15-inch Late 2016, Touch Bar | MacBookPro13,3 | Not tested; future candidate |
+| 13-inch Mid 2017, Touch Bar | MacBookPro14,2 | Not tested; future candidate |
+| 15-inch Mid 2017, Touch Bar | MacBookPro14,3 | Not tested; future candidate |
+
+---
+
+### Verified test configuration
+
+- **Computer:** MacBook Pro 13-inch Late 2016 (MacBookPro13,2)
+- **Operating system:** Ubuntu 26.04.1 LTS
+- **Kernel:** 7.0.0-43-generic
+- **Storage:** External Samsung T9 SSD
+- **Verified hardware:** Touch Bar, internal speakers, microphone, FaceTime HD camera, keyboard, trackpad and Wi-Fi
+
+**Important:** Similar hardware does not guarantee compatibility. The current installer refuses unsupported model identifiers. Do not bypass this protection to install on another model.
+
+MacBook Pro models without a T1 chip, and newer models equipped with Apple's T2 chip, are outside the current scope.
+
+[Detailed compatibility information](docs/COMPATIBILITY.md)
 
 ---
 
@@ -70,17 +102,18 @@ A known beta issue can make this status display look alarming even while the har
 | Touch Bar and function keys | ✅ Working on the test Mac |
 | Internal speakers (Cirrus CS8409) | ✅ Working on the test Mac |
 | Built-in keyboard / trackpad | ✅ Working on the test Mac |
-| Broadcom Wi-Fi | 🟡 Driver detected and scans networks; connection and regulatory behavior should be checked per device |
+| Broadcom Wi-Fi | ✅ Working on the test Mac |
 | T1 iBridge | ✅ Detected |
-| Camera / microphone | 🟡 Requires broader testing |
+| FaceTime HD camera | ✅ Working on the test Mac |
+| Built-in microphone | ✅ Working on the test Mac |
 | Touch ID | ❌ Not supported |
 | Apple-style customizable Touch Bar graphics | ❌ Not supported |
 | Suspend/resume with external boot drive | ⚠️ Untested; avoid for now |
-| External graphics (eGPU) | 🧪 [Separate experimental project](docs/EGPU.md) |
+| External graphics (eGPU) | [Separate experimental project](docs/EGPU.md) |
 
 **One machine is not a compatibility guarantee.** We have positive real-hardware testing on `7.0.0-30-generic` (earlier package) and `7.0.0-43-generic` (v0.5.0 on the fresh Samsung SSD). The public beta needs more testers and proper regression testing on future kernel updates.
 
-## 🛟 Need help or want to contribute?
+## Need help or want to contribute?
 
 **You do not need to understand Linux commands to give useful feedback.**
 
