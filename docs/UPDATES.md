@@ -2,11 +2,11 @@
 
 Ubuntu's ordinary security and application updates are important. **Don't permanently block kernel security updates** merely to keep this experimental driver working. At the same time, newly released kernels need testing before the Mac-specific driver modules can be trusted.
 
-## Current v0.5.0 behavior
+## Current beta behavior
 
-- DKMS is configured to rebuild the Apple iBridge/Touch Bar and Cirrus CS8409 modules when compatible kernels are installed and the required Ubuntu build sources are available.
+- DKMS is configured to rebuild the Apple iBridge/Touch Bar module and, for the MacBookPro13,2 full profile, the Cirrus CS8409 module when compatible kernels are installed and the required Ubuntu build sources are available.
 - `mbp132-support status` and an update-health service attempt to identify missing modules.
-- The fallback mechanism refers to `7.0.0-30-generic`. On machines installed directly with `7.0.0-43-generic`, that older version may not exist and therefore **no known-good kernel gets protected automatically**.
+- The full profile’s fallback mechanism refers to `7.0.0-30-generic`. On machines installed directly with `7.0.0-43-generic`, that older version may not exist and therefore **no known-good kernel gets protected automatically**.
 - A successful DKMS compile does **not** guarantee the rebuilt drivers work after reboot.
 - Users must install new versions of `mbp132-support` manually. **GitHub releases are not an APT repository and do not silently update users.**
 

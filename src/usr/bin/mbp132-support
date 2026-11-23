@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MacBookPro13,2 Ubuntu 26.04 LTS kernel 7.0 family integration v0.5
+# MacBook T1 Ubuntu 26.04 LTS integration v0.6.0
 # Developer preview. Run explicitly. Changes are never triggered by .deb install.
 set -Eeuo pipefail
 export LC_ALL=C
@@ -25,6 +25,29 @@ fail(){ printf 'STOPPED: %s\n' "$*" >&2; exit 1; }
 warn(){ printf 'WARNING: %s\n' "$*" >&2; }
 root(){ [ "$(id -u)" -eq 0 ] || fail 'Run with sudo.'; }
 model(){ cat /sys/class/dmi/id/product_name 2>/dev/null || :; }
+profile(){
+  case "$1" in
+    MacBookPro13,2) say full;;
+    MacBookPro13,3|MacBookPro14,2|MacBookPro14,3) say touchbar-beta;;
+    *) say ineligible;;
+  esac
+}
+require_profile(){
+  MODEL=$(model)
+  PROFILE=$(profile "$MODEL")
+  [ "$PROFILE" != ineligible ] || fail "Model ${MODEL:-unknown} is outside the 2016–2017 T1 Touch Bar allowlist."
+}
+require_install_model(){
+  if [ -f "$STATE/install-model" ]; then
+    [ "$(cat "$STATE/install-model")" = "$MODEL" ] || fail 'Recorded installation belongs to a different model.'
+  else
+    [ "$PROFILE" = full ] || fail 'No installation recorded for this model.'
+  fi
+}
+lock_install(){
+  exec 9>/run/lock/mbp132-support.lock
+  flock -n 9 || fail 'Another installation, removal or repair is running.'
+}
 os(){ (. /etc/os-release; echo "${ID:-}:${VERSION_ID:-}"); }
 kernel(){ uname -r; }
 secureboot(){
@@ -40,17 +63,24 @@ secureboot(){
   esac
 }
 validate(){
-  [ "$(model)" = 'MacBookPro13,2' ] || fail "Only MacBookPro13,2 supported; found $(model)."
+  require_profile
   [ "$(os)" = ubuntu:26.04 ] || fail "Only Ubuntu 26.04 LTS; found $(os)."
   [[ "$(kernel)" =~ ^7\.0\.0-[0-9]+-generic$ ]] || fail "Kernel $(kernel) is outside supported 7.0.0-generic family; no driver changes made."
-  if [ "$KERNEL" != "$KNOWN_GOOD_KERNEL" ]; then
-    warn "Kernel $KERNEL is NOT hardware-validated. Known working: $KNOWN_GOOD_KERNEL. Builds are not proof of runtime safety."
+  if [ "$PROFILE" = touchbar-beta ]; then
+    warn "$MODEL is hardware-unverified for this package. Touch Bar beta only."
+    [ -d /sys/firmware/efi ] || fail 'EFI boot required for the Touch Bar beta.'
+  elif [ "$KERNEL" != "$KNOWN_GOOD_KERNEL" ] && [ "$KERNEL" != 7.0.0-43-generic ]; then
+    warn "Kernel $KERNEL has no project hardware result on $MODEL."
   fi
   [ "$(dpkg --print-architecture)" = amd64 ] || fail 'Requires amd64.'
   [ -d "/lib/modules/$KERNEL" ] || fail 'Kernel modules directory missing.'
-  lsusb 2>/dev/null | grep -qi '05ac:8600' || fail 'T1 iBridge (05ac:8600) missing or in recovery mode. Stop before patching.'
-  lspci -nn | grep -qi '14e4:43ba' || fail 'Expected Broadcom BCM43602 (14e4:43ba) missing. Stop.'
-  [ -e /sys/class/net/wlp2s0 ] || fail 'Expected wlp2s0 interface missing. Stop.'
+  local bridge
+  bridge=$(lsusb -d 05ac:8600) || fail 'T1 iBridge (05ac:8600) missing or in recovery mode. Stop before patching.'
+  [ -n "$bridge" ] || fail 'T1 iBridge (05ac:8600) missing.'
+  if [ "$PROFILE" = full ]; then
+    lspci -nn -d 14e4:43ba | grep '14e4:43ba' >/dev/null || fail 'Expected Broadcom BCM43602 (14e4:43ba) missing. Stop.'
+    [ -e /sys/class/net/wlp2s0 ] || fail 'Expected wlp2s0 interface missing. Stop.'
+  fi
   case "$(secureboot)" in
     *enabled*) fail 'Secure Boot enabled: unsigned DKMS module install is unsafe; no MOK setup automated.';;
     disabled|unsupported) :;;
@@ -123,22 +153,23 @@ print_source(){
   fi
 }
 preflight(){
-  say '=== MBP13,2 hardware support: read-only check ==='
+  say '=== MacBook T1 support: read-only check ==='
   say "OS: $(os); Model: $(model); Kernel: $(kernel)"
-  say "T1: $(lsusb | grep -i '05ac:8600' || echo missing)"
-  say "Broadcom: $(lspci -nn | grep -i '14e4:43ba' || echo missing)"
-  say "Wi-Fi: $(nmcli -t -f DEVICE,TYPE,STATE device 2>/dev/null | grep ':wifi:' || echo not-connected)"
   say "Secure Boot: $(secureboot)"
-  print_source
   validate
-  if readmac >/dev/null; then
-    say 'Wi-Fi hardware address: usable.'
+  say "T1: $(lsusb -d 05ac:8600)"
+  say "Installation profile: $PROFILE"
+  if [ "$PROFILE" = full ]; then
+    print_source
+    if readmac >/dev/null; then
+      say 'Wi-Fi hardware address: usable.'
+    else
+      say 'Installer will generate a stable, locally administered Wi-Fi address.'
+    fi
   else
-    say 'Wi-Fi: Broadcom placeholder address detected. Installer will generate and save a stable, locally administered address automatically.'
+    say 'Eligible for experimental Touch Bar installation. Audio and Wi-Fi calibration are excluded.'
   fi
-  say 'PASS: model, OS, T1, Broadcom and kernel match.'
-  say 'NOT YET VERIFIED: touchbar source, audio ABI runtime, Wi-Fi calibration compatibility.'
-  say 'No changes were made.'
+  say 'PASS: platform checks. Physical operation requires testing after reboot.'
 }
 get_repo(){
   local url="$1" ref="$2" dir="$3" sha
@@ -158,6 +189,12 @@ install_prereqs(){
     apt-get install -y "linux-headers-$KERNEL" "linux-source-7.0.0=$ver" || fail 'Exact Ubuntu source unavailable. No driver patching attempted.'
   fi
   source_ok || fail 'Kernel source and image versions still do not match.'
+}
+install_headers(){
+  [ -e "/lib/modules/$KERNEL/build/Makefile" ] && return 0
+  apt-get update
+  apt-get install -y "linux-headers-$KERNEL"
+  [ -e "/lib/modules/$KERNEL/build/Makefile" ] || fail 'Matching kernel headers unavailable.'
 }
 install_t1(){
   local src="$1" out=/usr/src/apple-ib-drv-0.1 f
@@ -231,66 +268,78 @@ install_audio(){
 install_all(){
   root
   validate
-  local mac work log touch_sha
-  say "Target verified: $(model), $(os), $(kernel)."
-  say 'Integration risk: audio patch not yet validated on THIS machine; may cause an unbootable kernel or sound failure.'
-  say 'No EFI, GRUB, USB storage, Thunderbolt or suspend configuration will be changed.'
-  say 'Requires third-party community code and NVRAM from GitHub, installed locally with root privileges.'
-  say 'Type INSTALL to accept this experimental integration (or press Enter to stop):'
-  read -r answer
-  [ "$answer" = INSTALL ] || fail 'Cancelled; system unmodified.'
-  [ ! -e "$STATE/attempted" ] || fail 'Previous installation detected; do not overlay drivers. Use status or repair.'
-  if dkms status 2>/dev/null | grep -Eqi '(apple-ib-drv|apple-t1-touchbar|snd_hda_macbookpro|snd-hda-codec)'; then
-     fail 'Existing Apple driver detected in DKMS. Refusing to overlay it.'
+  lock_install
+  local mac work log answer confirmation=INSTALL component file dkms_state
+  local components=(touch)
+  [ ! -e "$STATE/attempted" ] || fail 'Previous installation detected. Check status before repairing or removing it.'
+  dkms_state=$(dkms status) || fail 'Cannot inspect existing DKMS installations.'
+  if [[ "${dkms_state,,}" =~ (apple[-_]ib[-_]drv|apple[-_]t1[-_]touchbar|apple[-_]ibridge|apple[-_]touchbar|apple[-_]ib[-_]tb|appletb|snd[-_]hda[-_]macbookpro|snd[-_]hda[-_]codec) ]]; then
+    fail 'Existing Apple driver detected in DKMS. Refusing to overlay it.'
   fi
-  mkdir -p "$STATE" "$LOGDIR"
+  say "Target: $MODEL, $(os), $KERNEL ($PROFILE)."
+  if [ "$PROFILE" = full ]; then
+    components+=(audio wifi)
+    say 'Experimental audio patch and board-specific Wi-Fi calibration will be installed.'
+    say 'A faulty audio patch can harm system stability. Keep a working recovery boot option.'
+  else
+    confirmation=INSTALL-TOUCHBAR
+    say 'Hardware-unverified Touch Bar beta. Changes affect iBridge and may affect its camera interface.'
+    say 'Audio and Wi-Fi calibration are excluded. Keep a working recovery boot option.'
+    for component in apple_ibridge apple_touchbar apple_ib_tb hid_appletb_kbd hid_appletb_bl; do
+      [ ! -d "/sys/module/$component" ] || fail "Existing Touch Bar or iBridge module loaded: $component."
+    done
+    for file in /usr/src/apple-ib-drv-0.1 /etc/modprobe.d/mbp132-apple-touchbar.conf \
+                /etc/modules-load.d/mbp132-apple-touchbar.conf /etc/udev/rules.d/99-mbp132-ibridge.rules; do
+      [ ! -e "$file" ] && [ ! -L "$file" ] || fail "Existing Touch Bar path: $file."
+    done
+  fi
+  say 'The installer uses pinned third-party code from GitHub with root privileges.'
+  say "Type $confirmation to proceed (or press Enter to stop):"
+  read -r answer || fail 'Cancelled.'
+  [ "$answer" = "$confirmation" ] || fail 'Cancelled.'
+  install -d -m 0755 "$STATE" "$LOGDIR"
   log="$LOGDIR/install-$(date +%Y%m%d-%H%M%S).log"
   exec > >(tee -a "$log") 2>&1
   say "Log: $log"
   work="$(mktemp -d /var/tmp/mbp132-support.XXXXXX)"
   MBP132_WORKDIR="$work"
-  chmod 700 "$work"
-  say 'Acquiring upstream sources (all before changing drivers)...'
-  get_repo "$AUDIO_URL" "$AUDIO_REF" "$work/audio"
   get_repo "$TOUCH_URL" "$TOUCH_REF" "$work/touch"
-  get_repo "$WIFI_URL" "$WIFI_REF" "$work/wifi"
-  # SHA pinned to the already working hardware-tested v0.4 snapshot.
-  # Reject unexpected source and verify its freeze guard before changes.
-  touch_sha=$(git -C "$work/touch" rev-parse HEAD)
-  [ -n "$touch_sha" ] || fail 'Could not freeze Touch Bar revision.'
   grep -q 'skip_acpi_power' "$work/touch/apple-ib-drv/apple-ibridge.c" || fail 'Touch Bar source lacks the expected ACPI freeze guard.'
-  grep -q 'skip_acpi_power' "$work/touch/apple-ib-drv/apple-ibridge.h" "$work/touch/apple-ib-drv/apple-ibridge.c" || fail 'Touch Bar freeze guard not found.'
-  say "Touch Bar source revision frozen for this installation: $touch_sha"
-  for file in "$work/audio/install.cirrus.driver.sh" "$work/touch/apple-ib-drv/dkms.conf" "$work/wifi/firmware/brcmfmac43602-pcie.txt"; do
-    [ -s "$file" ] || fail "Repository missing $file"
-  done
-  say 'Checking and installing matching *official Ubuntu* build sources...'
-  install_prereqs
-  mac=$(choosemac)
-  # Local address generation is the only pre-driver configuration change.
-  say 'Wi-Fi address selected automatically.'
+  if [ "$PROFILE" = full ]; then
+    get_repo "$AUDIO_URL" "$AUDIO_REF" "$work/audio"
+    get_repo "$WIFI_URL" "$WIFI_REF" "$work/wifi"
+    for file in "$work/audio/install.cirrus.driver.sh" "$work/wifi/firmware/brcmfmac43602-pcie.txt"; do
+      [ -s "$file" ] || fail "Repository missing $file"
+    done
+    install_prereqs
+    mac=$(choosemac)
+  else
+    install_headers
+  fi
+  printf '%s\n' "$MODEL" > "$STATE/install-model"
   touch "$STATE/attempted"
-  # Preserve exact local sources so removal can replay the uninstaller.
-  cp -a "$work/audio" "$STATE/audio"
-  cp -a "$work/touch" "$STATE/touch"
-  cp -a "$work/wifi" "$STATE/wifi"
-  printf '%s\n' "$touch_sha" > "$STATE/touch-revision.sha"
+  for component in "${components[@]}"; do
+    cp -a "$work/$component/." "$STATE/$component/"
+  done
+  printf '%s\n' "$TOUCH_REF" > "$STATE/touch-revision.sha"
   say 'Installing T1 Touch Bar DKMS module for next boot (no live T1 reload)...'
   install_t1 "$STATE/touch"
-  install_keyboard_backlight
-  say 'Installing calibrated Wi-Fi NVRAM (no live reload or firmware binary patch)...'
-  install_wifi "$STATE/wifi" "$mac"
-  say 'Installing experimental kernel 7 audio driver...'
-  install_audio "$STATE/audio"
+  if [ "$PROFILE" = full ]; then
+    install_keyboard_backlight
+    install_wifi "$STATE/wifi" "$mac"
+    install_audio "$STATE/audio"
+  fi
   say 'DKMS summary:'
   dkms status || true
   say 'Installation steps completed. REBOOT and run: mbp132-support status'
-  /usr/lib/mbp132-support/fallback protect || warn 'Unable to preserve the known-good kernel; do not run kernel updates until reviewed.'
+  if [ "$PROFILE" = full ]; then
+    /usr/lib/mbp132-support/fallback protect || warn 'Unable to preserve the known-good kernel; do not run kernel updates until reviewed.'
+  fi
   /usr/lib/mbp132-support/update-guard --apt || true
-  say 'Do not try suspend yet with the Samsung T9 boot drive connected.'
+  say 'Suspend and resume from external boot drives still need testing.'
 }
 status(){
-  say "Model $(model); OS $(os); Kernel $(kernel)"
+  say "Model $(model); Profile $(profile "$(model)"); OS $(os); Kernel $(kernel)"
   say "Installed-state: $([ -e "$STATE/attempted" ] && echo attempted || echo not-run)"
   say 'DKMS:'
   dkms status 2>/dev/null || true
@@ -309,9 +358,25 @@ status(){
 }
 remove_all(){
   root
-  [ "$(model)" = MacBookPro13,2 ] || fail 'Incorrect model.'
+  require_profile
+  lock_install
+  require_install_model
   [ -e "$STATE/attempted" ] || fail 'No package changes recorded.'
-  say 'Attempting to remove only changes from mbp132-support v0.4.'
+  if [ "$PROFILE" = touchbar-beta ]; then
+    if [ -d /var/lib/dkms/apple-ib-drv/0.1 ]; then
+      dkms remove -m apple-ib-drv -v 0.1 --all || fail 'Touch Bar DKMS removal failed. Retry removal after inspecting DKMS.'
+    fi
+    rm -f /etc/modprobe.d/mbp132-apple-touchbar.conf /etc/modules-load.d/mbp132-apple-touchbar.conf /etc/udev/rules.d/99-mbp132-ibridge.rules
+    rm -f /usr/src/apple-ib-drv-0.1/{Makefile,apple-ibridge.c,apple-ibridge.h,apple-touchbar.c,hid-ids.h,dkms.conf}
+    if [ -d /usr/src/apple-ib-drv-0.1 ]; then
+      rmdir /usr/src/apple-ib-drv-0.1 || warn 'Other files remain in the Touch Bar source directory.'
+    fi
+    udevadm control --reload || warn 'udev rules will reload at reboot.'
+    rm -f "$STATE/attempted"
+    say 'Touch Bar removal completed. Reboot to finish.'
+    return
+  fi
+  say 'Attempting to remove changes from the full installation.'
   if [ -f "$STATE/audio/install.cirrus.driver.sh" ]; then
     (cd "$STATE/audio" && bash ./install.cirrus.driver.sh -r) || warn 'Audio removal failed: inspect dkms status.'
   fi
@@ -339,25 +404,30 @@ remove_all(){
 }
 repair_modules(){
   root
+  validate
+  lock_install
   [ -f "$STATE/attempted" ] || fail 'Nothing to repair; run install on a clean system.'
-  [ "$(model)" = 'MacBookPro13,2' ] || fail 'Wrong Mac model.'
-  [ "$(os)" = ubuntu:26.04 ] || fail 'Ubuntu 26.04 required.'
-  [[ "$KERNEL" =~ ^7\.0\.0-[0-9]+-generic$ ]] || fail 'Kernel not in supported family; refusing repair.'
-  say "Repair candidate: kernel $KERNEL. New kernels have NOT been hardware-validated."
-  # Never build against stale /usr/src: exact distro source is a hard requirement.
-  install_prereqs
+  require_install_model
+  say "Repair candidate: $MODEL on $KERNEL. A DKMS build does not verify hardware operation."
   local m
-  for m in apple-ib-drv snd_hda_macbookpro; do
+  local modules=(apple-ib-drv)
+  if [ "$PROFILE" = full ]; then
+    install_prereqs
+    modules+=(snd_hda_macbookpro)
+  else
+    install_headers
+  fi
+  for m in "${modules[@]}"; do
     [ -f "/usr/src/${m}-0.1/dkms.conf" ] || fail "Missing local source for $m; no network fallback attempted."
     if dkms status -m "$m" -v 0.1 -k "$KERNEL" 2>/dev/null | grep -q ': installed'; then
       say "Already installed: $m on $KERNEL."
     else
       say "Rebuilding missing module: $m on $KERNEL."
-      dkms install -m "$m" -v 0.1 -k "$KERNEL" || fail "DKMS rebuild failed: $m. Keep booting $KNOWN_GOOD_KERNEL."
+      dkms install -m "$m" -v 0.1 -k "$KERNEL" || fail "DKMS rebuild failed: $m. Use a previously working boot option."
     fi
   done
   /usr/lib/mbp132-support/update-guard --apt || true
-  say 'Repair finished; restart and verify physical sound/Touch Bar/Wi-Fi.'
+  say 'Repair finished. Reboot and verify the installed features.'
 }
 case "${1:-help}" in
   preflight) preflight;;
@@ -367,17 +437,18 @@ case "${1:-help}" in
   status) status;;
   remove) remove_all;;
   help|-h|--help) cat <<'DOC'
-MacBookPro13,2 Support v0.5.0 (BETA; v0.4 worked on one real 13,2)
+MacBook T1 Support v0.6.0 Beta
   sudo mbp132-support preflight  # read-only compatibility checks
-  sudo mbp132-support install    # install 3 community patches after one consent prompt
+  sudo mbp132-support install    # install the model-specific profile after confirmation
   mbp132-support status          # inspect driver builds and kernel warnings
   sudo mbp132-support repair     # rebuild missing DKMS modules for supported kernel
   sudo mbp132-support protect    # keep the known-good kernel from autoremove
   sudo mbp132-support remove     # best-effort undo
 
-Do NOT install on another model, kernel, or Ubuntu version. The installer
-uses third-party drivers, not official Apple/Ubuntu support. Its audio patch
-is an unmerged PR. An incorrect audio ABI can crash the kernel.
+Ubuntu 26.04 amd64, generic 7.0.0 kernel and active T1 iBridge required.
+MacBookPro13,2 uses the existing full profile with experimental audio.
+MacBookPro13,3, MacBookPro14,2 and MacBookPro14,3 are hardware-unverified
+Touch Bar beta candidates. These candidates receive no audio or Wi-Fi patch.
 
 Wi-Fi NVRAM is a community file. If the permanent Wi-Fi MAC is unavailable,
 a stable locally-administered unicast MAC is generated automatically and saved.

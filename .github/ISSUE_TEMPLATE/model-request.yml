@@ -5,7 +5,7 @@ labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
-      value: "**Thanks!** Our installer currently refuses all models other than MacBookPro13,2. This form is a request for future support, **not** permission to force an install."
+      value: "Use this form to request coverage outside the 0.6.0 compatibility table. For tests on an eligible model, use the success or bug report form."
   - type: input
     id: model
     attributes:

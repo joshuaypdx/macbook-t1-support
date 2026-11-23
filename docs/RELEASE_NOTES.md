@@ -1,11 +1,11 @@
-# MacBook T1 Support 0.5.0 Beta
+# Help test MacBook T1 Support 0.6.0 Beta
 
-A community-made setup helper for Ubuntu **26.04 LTS** on the **13-inch Late 2016 MacBook Pro with Touch Bar** (`MacBookPro13,2`).
+Have a 2016 or 2017 MacBook Pro with Touch Bar running Ubuntu 26.04 LTS? We’re looking for reports from all four T1 models, especially the three new preview models.
 
-The setup integrates a community T1 Touch Bar driver, Cirrus CS8409 audio patch and Broadcom Wi-Fi configuration. This package was tested on one physical MacBook running Ubuntu 26.04.1 kernel **7.0.0-43-generic**. The hardware worked in that fresh-install test, but broader testing is still needed.
+- **MacBookPro13,2** keeps the full setup. The previous package worked on one MacBookPro13,2 running Ubuntu 26.04.1, kernel `7.0.0-43-generic`, from a Samsung T9 external SSD. A 0.6.0 regression report on this model is welcome.
+- **MacBookPro13,3, MacBookPro14,2 and MacBookPro14,3** can opt into the **hardware-unverified Touch Bar preview**. The preview installs the iBridge/Touch Bar driver and excludes audio patches and Wi-Fi calibration. Check the FaceTime camera too, since it shares the iBridge.
+- This is a prerelease with offline installer and package checks. 0.6.0 still needs testing on physical Macs.
 
-**Install:** Download `mbp132-support_0.5.0_all.deb`, then follow the easy [five-step guide](../README.md#-start-here-no-linux-expertise-required).
+Download `mbp132-support_0.6.0_all.deb` below, back up your important files and follow the [install and recovery guide](https://github.com/joshuaypdx/macbook-t1-support/blob/v0.6.0-beta.1/docs/INSTALL.md). Run the read-only preflight before installing drivers.
 
-**Important beta limits:** `MacBookPro13,2` only; no guarantees for future kernels or suspend; `status` and saved fallback-kernel reporting can be misleading (see [Known issues](KNOWN_ISSUES.md)). This is not an official Apple or Ubuntu package.
-
-Thank you to the authors of the three upstream projects named in [NOTICE.md](../NOTICE.md).
+[Report a success or failure](https://github.com/joshuaypdx/macbook-t1-support/issues/new/choose). Include your model identifier, Ubuntu version, `uname -r`, preflight and reboot results, and what worked. Please redact serial numbers, MAC addresses and other identifiers.

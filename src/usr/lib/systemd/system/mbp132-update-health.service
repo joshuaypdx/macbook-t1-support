@@ -1,5 +1,5 @@
 [Unit]
-Description=Read-only Apple MacBookPro13,2 DKMS health report
+Description=Read-only MacBook T1 DKMS health report
 After=multi-user.target
 ConditionPathExists=/var/lib/mbp132-support/attempted
 

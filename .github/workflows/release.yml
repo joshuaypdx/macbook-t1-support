@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "New beta tag, e.g. v0.5.0-beta.1"
+        description: "New beta tag, e.g. v0.6.0-beta.1"
         required: true
-        default: "v0.5.0-beta.1"
+        default: "v0.6.0-beta.1"
         type: string
 
 permissions:
@@ -23,14 +23,15 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta(\.[0-9]+)?$ ]] || { echo 'Tag must be like v0.5.0-beta.1'; exit 1; }
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta(\.[0-9]+)?$ ]] || { echo 'Tag must be like v0.6.0-beta.1'; exit 1; }
           python3 src/tests/test_package.py
           python3 tests/verify-release.py
-          PKG=packages/mbp132-support_0.5.0_all.deb
-          VERSION=$(dpkg-deb -f "$PKG" Version)
+          VERSION=$(sed -n 's/^Version: //p' src/debian/control)
           TAG_VERSION="${RELEASE_TAG#v}"
           TAG_VERSION="${TAG_VERSION%%-*}"
           [ "$VERSION" = "$TAG_VERSION" ] || { echo "Tag version $TAG_VERSION != deb version $VERSION"; exit 1; }
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          (cd packages && sha256sum "mbp132-support_${VERSION}_all.deb") > SHA256SUMS
       - name: Create GitHub pre-release with .deb download
         env:
           GH_TOKEN: ${{ github.token }}
@@ -38,8 +39,8 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "$RELEASE_TAG" \
-            packages/mbp132-support_0.5.0_all.deb \
-            --title "MacBook T1 Support 0.5.0 Beta" \
+            "packages/mbp132-support_${VERSION}_all.deb" SHA256SUMS \
+            --title "MacBook T1 Support $VERSION Beta" \
             --notes-file docs/RELEASE_NOTES.md \
             --prerelease \
             --target "$GITHUB_SHA"

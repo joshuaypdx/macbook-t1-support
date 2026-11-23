@@ -1,52 +1,23 @@
-# Installation: one step at a time
+# Install and test the beta
 
-This is written for Mac owners who are new to Linux. You need a **MacBookPro13,2**, Ubuntu **26.04 LTS**, an internet connection and a backup.
+Use Ubuntu 26.04 LTS on an [eligible MacBook Pro](COMPATIBILITY.md). Back up important files, keep a recovery boot option available, and have an internet connection. Keep external GPUs disconnected during the initial test.
 
-> [!WARNING]
-> This is a beta that modifies kernel drivers and the Wi-Fi calibration file. It has been tested on one physical MacBookPro13,2, not every machine. Don't install it on a different Mac, a different Linux distribution or a production system you cannot afford to troubleshoot. Avoid suspend with an external boot disk for now.
-
-## Before you begin
-
-1. Open **Settings → About** in Ubuntu to confirm you installed Ubuntu 26.04.
-2. Confirm the Mac is the **13-inch Late 2016 Touch Bar** model. If uncertain, open Terminal and run `cat /sys/class/dmi/id/product_name`. The supported answer is **`MacBookPro13,2`**.
-3. Make sure you can connect to the internet, perhaps using Ethernet during setup.
-4. Keep eGPU hardware disconnected while establishing basic support.
-
-## Install
-
-1. From the repository's home page, download the [v0.5.0 .deb](../packages/mbp132-support_0.5.0_all.deb?raw=1) into **Downloads**. If GitHub displays the file rather than downloading, use **Download raw file**.
-2. Open **Terminal**. You can find it via the app launcher. Copy/paste one command at a time:
+1. Download [the 0.6.0 beta package](../packages/mbp132-support_0.6.0_all.deb?raw=1) to Downloads. The [SHA-256 checksums](../packages/SHA256SUMS) are available alongside it.
+2. In Terminal, install the utility and run its read-only preflight.
 
    ```bash
-   sudo apt install ~/Downloads/mbp132-support_0.5.0_all.deb
-   ```
-
-   Enter your Ubuntu login password. No dots or stars appear while you type.
-3. Run a read-only compatibility check:
-
-   ```bash
+   sudo apt install ~/Downloads/mbp132-support_0.6.0_all.deb
    sudo mbp132-support preflight
    ```
 
-   If it says **STOPPED**, copy the error into a new [support request](../.github/ISSUE_TEMPLATE/help.yml), then stop. Don't force an unsupported setup.
-4. Install the driver integration:
+3. If preflight reports PASS, run `sudo mbp132-support install`. Read the displayed profile before confirming. Enter `INSTALL` on MacBookPro13,2 for the full profile. Enter `INSTALL-TOUCHBAR` on MacBookPro13,3, MacBookPro14,2 or MacBookPro14,3 for the hardware-unverified Touch Bar preview. A STOPPED result is a reason to [send a report](../../issues/new/choose).
+4. Reboot after the installer finishes. Check Touch Bar Esc, Fn/function keys, brightness and media keys, FaceTime camera, keyboard and trackpad. On MacBookPro13,2, also check speakers, microphone and Wi-Fi. Run `mbp132-support status` for diagnostics.
+5. Report the model identifier, Ubuntu version, `uname -r`, installation profile, reboot result, and the features you checked. [Open a test report](../../issues/new/choose). Redact device identifiers and share only relevant log lines.
 
-   ```bash
-   sudo mbp132-support install
-   ```
+If you already have a working full installation, upgrading the utility preserves the installed drivers. Use `status` and hardware checks after upgrading. The install command refuses to overlay a recorded installation.
 
-   Read the warning and type **`INSTALL`** exactly when prompted. The installer fetches pinned sources and builds drivers for the *currently running* kernel.
-5. Once you see **Installation steps completed**, restart the MacBook using Ubuntu's **Power → Restart** menu. Keep the external storage attached; do not attempt suspend/resume yet.
-6. Test the speakers with a music track, try the volume keys and Touch Bar, type on the keyboard, move the trackpad, and verify visible Wi-Fi networks. Try connecting to your own Wi-Fi. Microphone and webcam testing is welcome, but their operation is not guaranteed by this beta.
+## Recovery
 
-## Status after installation
+If boot hangs after the Touch Bar install, edit the boot entry in GRUB for one boot and append `modprobe.blacklist=apple_ibridge,apple_touchbar` to the Linux kernel line. If necessary, use a recovery or live Ubuntu boot option. [Upstream recovery instructions](https://github.com/AJ-dev-i60/t1-touchbar/tree/20d65c7b0fe6d05ea9734f869b27384a62de5109#troubleshooting)
 
-```bash
-mbp132-support status
-```
-
-Some builds of v0.5.0 show `Installed-state: not-run` or report the audio DKMS package as `broken` even when the **actual** driver is loaded and `dkms status` reports it installed. Don't repeat the install just to clear this label. Check the hardware and see [Known issues](KNOWN_ISSUES.md).
-
-## Next time
-
-You do **not** need to run `mbp132-support install` again after every reboot. For updates, read [Updating safely](UPDATES.md). If your audio or Touch Bar stops after a kernel update, first boot a previously working kernel if available, then ask for help. Never force the installer onto an untested kernel.
+From the installed Ubuntu system, run `sudo mbp132-support remove` before removing the package itself, then reboot. For the full profile, driver and firmware removal is best effort. See [troubleshooting](TROUBLESHOOTING.md) and [kernel updates](UPDATES.md).

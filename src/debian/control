@@ -1,12 +1,11 @@
 Package: mbp132-support
-Version: 0.5.0
+Version: 0.6.0
 Section: admin
 Priority: optional
 Architecture: all
-Depends: bash, coreutils, git, ca-certificates, dkms, build-essential, linux-firmware, pciutils, usbutils, ethtool, network-manager, kmod, mokutil, systemd
+Depends: bash, coreutils, git, ca-certificates, dkms, build-essential, linux-firmware, pciutils, usbutils, ethtool, network-manager, kmod, mokutil, systemd, util-linux
 Maintainer: MacBookPro13,2 community integration <maintainers@invalid.example>
-Description: Beta support integration and kernel update monitor for 2016 T1 MacBook Pro
- Installs Apple T1 Touch Bar, Cirrus audio and BCM43602 Wi-Fi NVRAM from
- pinned community sources after explicit approval. Preserves a known-good
- Ubuntu kernel from autoremove, monitors DKMS on updates; cannot guarantee
- future kernel ABI compatibility. Intended for Ubuntu 26.04 LTS.
+Description: MacBook T1 beta integration and kernel update monitor
+ Installs the Touch Bar driver from pinned community source after explicit
+ approval on eligible 2016–2017 T1 models. The existing Cirrus audio and
+ BCM43602 Wi-Fi setup is limited to MacBookPro13,2. For Ubuntu 26.04 LTS.

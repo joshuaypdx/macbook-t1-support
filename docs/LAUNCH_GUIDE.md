@@ -39,9 +39,9 @@ Your README is now your project's home page. The installer and source are there.
 
 The README already offers a direct package download immediately after Step 4. For a conventional GitHub **Releases** page, use one of these easy methods:
 
-**Method A: Fully through the website.** Open **Releases → Draft a new release**, create tag `v0.5.0-beta.1`, title it `MacBook T1 Support 0.5.0 Beta`, mark **This is a pre-release**, attach `mbp132-support_0.5.0_all.deb` from the starter's `packages/` folder, then publish. Paste the text in `docs/RELEASE_NOTES.md` as its description.
+**Method A: Fully through the website.** Open **Releases → Draft a new release**, create tag `v0.6.0-beta.1`, title it `MacBook T1 Support 0.6.0 Beta`, mark **This is a pre-release**, attach `mbp132-support_0.6.0_all.deb` from the starter's `packages/` folder, then publish. Paste the text in `docs/RELEASE_NOTES.md` as its description.
 
-**Method B: One-click automated release.** Open **Actions → Publish beta release → Run workflow**, enter `v0.5.0-beta.1` and click **Run workflow**. The workflow validates source/package consistency, then makes the pre-release and attaches the `.deb`. If Actions requests workflow permission, grant it for this trusted repository. Do not publish if validation fails. Use **A OR B**, not both with the same tag.
+**Method B: One-click automated release.** Open **Actions → Publish beta release → Run workflow**, enter `v0.6.0-beta.1` and click **Run workflow**. The workflow validates source/package consistency, then makes the pre-release and attaches the `.deb`. If Actions requests workflow permission, grant it for this trusted repository. Do not publish if validation fails. Use **A OR B**, not both with the same tag.
 
 ## 7. Receive feedback and updates
 
@@ -53,6 +53,4 @@ The README already offers a direct package download immediately after Step 4. Fo
 
 ## Before a wider announcement
 
-Check the actual download link; ensure the `.deb` matches the source and the real tested kernel. Prominently state that this is a beta for `MacBookPro13,2` only, and that `mbp132-support status` and fallback-kernel tracking need improvement. Do not promise Touch ID, all T1 Macs or flawless future kernel updates. The Wi-Fi NVRAM's provenance and RF/regulatory implications deserve additional review.
-
-**Ready for a community beta is not the same thing as ready to recommend to every Mac owner.** Consider a limited, clearly labeled beta invitation first.
+Check the download and checksum against the release package. Describe the full profile’s v0.5.0 MacBookPro13,2 baseline separately from the 0.6.0 Touch Bar preview on MacBookPro13,3, MacBookPro14,2 and MacBookPro14,3. Invite reports using the text in [release notes](RELEASE_NOTES.md).

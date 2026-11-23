@@ -19,6 +19,10 @@ jobs:
         run: python3 src/tests/test_package.py
       - name: Verify downloadable package matches source
         run: python3 tests/verify-release.py
+      - name: Build and verify the package from a clean checkout
+        run: |
+          tests/build-package.sh "$RUNNER_TEMP/rebuilt.deb"
+          python3 tests/verify-release.py "$RUNNER_TEMP/rebuilt.deb"
       - name: Check Markdown and issue templates are present
         run: |
           test -s README.md

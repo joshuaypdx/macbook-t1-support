@@ -7,38 +7,40 @@ import tempfile
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-DEB = ROOT / 'packages' / 'mbp132-support_0.5.0_all.deb'
 SOURCE = ROOT / 'src'
-EXPECTED_SHA = '4e6a372db887b575649f60d1b17a00a7900ff8ed975143b71a43d74662b7d09b'
+VERSION = next(line.split(': ', 1)[1] for line in (SOURCE / 'debian/control').read_text().splitlines()
+               if line.startswith('Version: '))
+DEB = ROOT / 'packages' / f'mbp132-support_{VERSION}_all.deb'
 
 
 def cmd(*args):
     return subprocess.check_output(args, text=True).strip()
 
 
+checksums = {name: digest for digest, name in
+             (line.split() for line in (DEB.parent / 'SHA256SUMS').read_text().splitlines())}
+for package in DEB.parent.glob('*.deb'):
+    assert hashlib.sha256(package.read_bytes()).hexdigest() == checksums[package.name], package
+if len(sys.argv) > 1:
+    DEB = Path(sys.argv[1]).resolve()
 assert DEB.is_file(), f'Package missing: {DEB}'
-assert hashlib.sha256(DEB.read_bytes()).hexdigest() == EXPECTED_SHA, 'Published beta .deb differs from real-hardware-tested binary. Refuse release until tested version/checksum are updated.'
 assert cmd('dpkg-deb', '-f', str(DEB), 'Package') == 'mbp132-support'
-assert cmd('dpkg-deb', '-f', str(DEB), 'Version') == '0.5.0'
+assert cmd('dpkg-deb', '-f', str(DEB), 'Version') == VERSION
+assert cmd('dpkg-deb', '-f', str(DEB), 'Architecture') == 'all'
 
 with tempfile.TemporaryDirectory() as tmp:
     extracted = Path(tmp) / 'payload'
     controls = Path(tmp) / 'meta'
     subprocess.run(['dpkg-deb', '-x', str(DEB), str(extracted)], check=True)
     subprocess.run(['dpkg-deb', '-e', str(DEB), str(controls)], check=True)
-    checked = 0
-    for file in SOURCE.rglob('*'):
-        if not file.is_file() or file.relative_to(SOURCE).parts[0] == 'tests':
-            continue
-        rel = file.relative_to(SOURCE)
-        if rel.parts[0] == 'debian':
-            counterpart = controls / rel.name
-        elif rel.parts[0] in ('usr', 'etc'):
-            counterpart = extracted / rel
-        else:
-            continue
-        assert counterpart.is_file(), f'Package lacks source-matching file: {rel}'
-        assert file.read_bytes() == counterpart.read_bytes(), f'Package content differs from source: {rel}'
-        checked += 1
-    assert checked > 8, f'Too few source/package matches: {checked}'
-print(f'PASS: tested v0.5.0 .deb checksum, control metadata, and {checked} exact source payload files')
+    for source_dir, target_dir in [(SOURCE / 'debian', controls), (SOURCE / 'usr', extracted / 'usr'),
+                                  (SOURCE / 'etc', extracted / 'etc')]:
+        source_files = {p.relative_to(source_dir) for p in source_dir.rglob('*') if p.is_file()}
+        target_files = {p.relative_to(target_dir) for p in target_dir.rglob('*') if p.is_file()}
+        assert source_files == target_files, f'Unexpected or missing files in {source_dir}'
+        for rel in source_files:
+            source, target = source_dir / rel, target_dir / rel
+            assert source.read_bytes() == target.read_bytes(), f'Package content differs: {rel}'
+            mode = 0o755 if source.stat().st_mode & 0o111 else 0o644
+            assert target.stat().st_mode & 0o7777 == mode, f'Package permissions differ: {rel}'
+print(f'PASS: {VERSION} checksums, metadata, contents and permissions')

@@ -1,25 +1,18 @@
-# Compatibility
+# Hardware compatibility
 
-## Verified (limited physical testing)
-
-| Mac | Ubuntu | Kernel | Test results |
+| Model identifier | Apple model | 0.6.0 install profile | Project hardware evidence |
 | --- | --- | --- | --- |
-| **MacBookPro13,2 (13-inch, Late 2016, T1 Touch Bar)** | 26.04.1 LTS | **7.0.0-43-generic** | Fresh-install v0.5.0 tested. Touch Bar, built-in speakers, keyboard and trackpad worked. Broadcom adapter enumerated and scanned 5 GHz networks; a Wi-Fi connection was not tested in that session. |
-| Same model | 26.04.1 LTS | **7.0.0-30-generic** | Earlier v0.4 integration test completed; speakers, microphone, Touch Bar/function keys and Wi-Fi were reported working. |
+| MacBookPro13,2 | 13-inch Late 2016, four Thunderbolt 3 ports | Full | v0.5.0 tested on Ubuntu 26.04.1, `7.0.0-43-generic`, from a Samsung T9 |
+| MacBookPro13,3 | 15-inch Late 2016 | Touch Bar beta | Unverified |
+| MacBookPro14,2 | 13-inch Mid 2017, four Thunderbolt 3 ports | Touch Bar beta | Unverified |
+| MacBookPro14,3 | 15-inch Mid 2017 | Touch Bar beta | Unverified with this package. The pinned upstream driver reports its own test on Ubuntu 26.04 with `7.0.0-27-generic`. |
+| MacBookPro13,1 and MacBookPro14,1 | 13-inch, two Thunderbolt 3 ports | Ineligible | No T1 Touch Bar |
+| All other model IDs | Includes T2 Macs and Apple silicon | Ineligible | Outside the allowlist |
 
-This is **one physical MacBook**, not a statistical compatibility study. The 7.0.0-43 test did not validate suspend/resume, new-kernel rebuilds or the removal path.
+The MacBookPro13,2 baseline recorded working Touch Bar, internal speakers, microphone, FaceTime HD camera, keyboard, trackpad and Wi-Fi. The same full integration remains model-restricted in 0.6.0. It uses the exact matching Ubuntu kernel source for audio and requires the original Broadcom hardware checks.
 
-## Not yet supported
+All profiles require Ubuntu 26.04 amd64, a `7.0.0-*-generic` kernel, a normally enumerated T1 iBridge (`05ac:8600`), and a compatible Secure Boot state. The Touch Bar preview also requires EFI boot and matching headers. It installs the shared iBridge/Touch Bar driver and its configuration. Because the camera uses the same bridge, test it after reboot. Audio patches and Wi-Fi calibration are excluded from the preview.
 
-- **MacBookPro13,3:** 15-inch 2016 Touch Bar, T1 but different hardware profile.
-- **MacBookPro14,2 / 14,3:** 2017 T1 MacBook Pro models.
-- Any other Mac, including 2018-and-newer **T2** Macs.
-- Other Ubuntu releases, Linux distributions or kernel families outside `7.0.0-*-generic`.
+Sources: [Apple model identifiers](https://support.apple.com/en-us/108052), [T1 USB identity and models](https://cgit.libimobiledevice.org/libirecovery.git/commit/README.md?id=42f2c26463da466f42d207b9c0094df0d351d47a), [pinned Touch Bar upstream](https://github.com/AJ-dev-i60/t1-touchbar/tree/20d65c7b0fe6d05ea9734f869b27384a62de5109).
 
-The current installer's preflight intentionally **rejects other models**. We welcome [model-support requests](../.github/ISSUE_TEMPLATE/model-request.yml) to establish a separately verified compatibility path.
-
-## Details
-
-The current T1 integration assumes Apple T1 iBridge USB ID `05ac:8600`, Broadcom BCM43602 PCI ID `14e4:43ba`, and a Wi-Fi interface named `wlp2s0`. Hardware differences may cause the preflight to stop even on superficially similar Macs. That is deliberate, not an invitation to remove the checks.
-
-The Cirrus CS8409 kernel patch is an unmerged compatibility change for Ubuntu's Linux 7 source. Builds are not guaranteed to work on future kernel revisions. [More about updates](UPDATES.md).
+See the [installation and recovery guide](INSTALL.md).

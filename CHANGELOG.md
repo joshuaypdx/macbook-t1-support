@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0 Beta
+
+- Add model-specific preflight and a separately confirmed Touch Bar preview for MacBookPro13,3, MacBookPro14,2 and MacBookPro14,3.
+- Keep the MacBookPro13,2 full profile. Exclude board-specific audio and Wi-Fi configuration on preview models.
+- Scope repair, removal and DKMS diagnostics to the recorded installation model and its components.
+- Add offline safety coverage and publish a new package with a SHA-256 checksum.
+
 ## 0.5.0 Beta (2026-11-10 public repository candidate)
 
 - Includes the tested v0.5.0 integration `.deb` and matching source tree.

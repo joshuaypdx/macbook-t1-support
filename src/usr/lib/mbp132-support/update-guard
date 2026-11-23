@@ -10,15 +10,24 @@ if [ ! -f "$STATE/attempted" ]; then
   [ "$mode" = --report ] && echo 'Hardware support not yet installed.'
   exit 0
 fi
-if [ "$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)" != 'MacBookPro13,2' ]; then
-  [ "$mode" = --report ] && echo 'Not running on MacBookPro13,2.'
+model=$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)
+case "$model" in
+  MacBookPro13,2) modules=(apple-ib-drv snd_hda_macbookpro);;
+  MacBookPro13,3|MacBookPro14,2|MacBookPro14,3) KNOWN=; modules=(apple-ib-drv);;
+  *) exit 0;;
+esac
+if [ -f "$STATE/install-model" ]; then
+  [ "$(cat "$STATE/install-model")" = "$model" ] || exit 0
+elif [ "$model" != MacBookPro13,2 ]; then
   exit 0
 fi
 issues=()
 lines=()
 current=$(uname -r)
 lines+=("Running kernel: $current")
-if [ -f "$STATE/known-good-kernel" ]; then
+if [ -z "$KNOWN" ]; then
+  lines+=("Touch Bar beta on $model: physical operation unverified.")
+elif [ -f "$STATE/known-good-kernel" ]; then
   lines+=("Protected fallback: $(cat "$STATE/known-good-kernel")")
 else
   issues+=("Known-good fallback kernel not yet protected.")
@@ -47,25 +56,25 @@ for k in "$KNOWN" "$current" "$latest"; do
 done
 for k in "${selected[@]}"; do
   if ! [[ "$k" =~ ^7\.0\.0-[0-9]+-generic$ ]]; then
-    issues+=("Kernel $k is OUTSIDE our supported 7.0.0-generic family. Retain $KNOWN.")
+    issues+=("Kernel $k is OUTSIDE our supported 7.0.0-generic family. Keep a previously working boot option.")
     continue
   fi
-  if [ "$k" = "$KNOWN" ]; then
+  if [ -n "$KNOWN" ] && [[ "$k" == "$KNOWN" || "$k" == 7.0.0-43-generic ]]; then
     lines+=("$k: KNOWN WORKING on one 13,2 (user-tested, not independent certification)")
   else
     lines+=("$k: UNTESTED hardware runtime (even if DKMS builds)")
-    issues+=("Kernel $k is untested with this T1/audio integration; keep $KNOWN available.")
+    issues+=("Kernel $k is untested with this profile; keep a previously working boot option.")
   fi
-  for m in apple-ib-drv snd_hda_macbookpro; do
+  for m in "${modules[@]}"; do
     state=$(dkms status -m "$m" -v 0.1 -k "$k" 2>/dev/null || true)
     if [[ "$state" == *': installed'* ]]; then
       lines+=("  $m DKMS: installed")
     else
       lines+=("  $m DKMS: MISSING or build failed")
-      issues+=("$m is not DKMS-installed for $k. Keep using $KNOWN until repaired.")
+      issues+=("$m is not DKMS-installed for $k. Use a previously working boot option until repaired.")
     fi
   done
-  if [ "$k" != "$KNOWN" ]; then
+  if [ -n "$KNOWN" ] && [ "$k" != "$KNOWN" ]; then
     # ABI-sensitive audio build must use the *exact* Ubuntu-patched source.
     imagever=$(dpkg-query -W -f='${Version}' "linux-image-$k" 2>/dev/null || true)
     srcver=$(dpkg-query -W -f='${Version}' linux-source-7.0.0 2>/dev/null || true)
@@ -90,7 +99,7 @@ else
     printf '%s\n' "$report" > "$STATE/update-health.txt"
   fi
   if [ "${#issues[@]}" -gt 0 ]; then
-    echo 'MBP13,2: module/kernel health warnings. Run: mbp132-support status' >&2
+    echo 'MacBook T1: module/kernel health warnings. Run: mbp132-support status' >&2
     command -v logger >/dev/null && logger -t mbp132-support "Module health warnings detected for $current" || true
   fi
 fi
