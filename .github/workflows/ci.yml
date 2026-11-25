@@ -16,7 +16,9 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
       - name: Check source scripts (offline)
-        run: python3 src/tests/test_package.py
+        run: |
+          python3 src/tests/test_package.py
+          python3 src/tests/test_trials.py
       - name: Verify downloadable package matches source
         run: python3 tests/verify-release.py
       - name: Build and verify the package from a clean checkout

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MacBook T1 Ubuntu 26.04 LTS integration v0.6.0
+# MacBook T1 Ubuntu 26.04 LTS integration v0.6.1
 # Developer preview. Run explicitly. Changes are never triggered by .deb install.
 set -Eeuo pipefail
 export LC_ALL=C
@@ -9,6 +9,7 @@ STATE=/var/lib/mbp132-support
 LOGDIR=/var/log/mbp132-support
 FW=/lib/firmware/brcm/brcmfmac43602-pcie.txt
 KERNEL=$(uname -r)
+WIFI_IFACE=wlp2s0
 KNOWN_GOOD_KERNEL=7.0.0-30-generic
 MBP132_WORKDIR=""
 # Global cleanup: safe even after install_all() returns and its locals vanish.
@@ -67,7 +68,7 @@ validate(){
   [ "$(os)" = ubuntu:26.04 ] || fail "Only Ubuntu 26.04 LTS; found $(os)."
   [[ "$(kernel)" =~ ^7\.0\.0-[0-9]+-generic$ ]] || fail "Kernel $(kernel) is outside supported 7.0.0-generic family; no driver changes made."
   if [ "$PROFILE" = touchbar-beta ]; then
-    warn "$MODEL is hardware-unverified for this package. Touch Bar beta only."
+    warn "$MODEL is hardware-unverified for this package. Feature trials require individual hardware checks."
     [ -d /sys/firmware/efi ] || fail 'EFI boot required for the Touch Bar beta.'
   elif [ "$KERNEL" != "$KNOWN_GOOD_KERNEL" ] && [ "$KERNEL" != 7.0.0-43-generic ]; then
     warn "Kernel $KERNEL has no project hardware result on $MODEL."
@@ -100,9 +101,10 @@ validmac(){
 }
 readmac(){
   local mac
-  mac=$(ethtool -P wlp2s0 2>/dev/null | awk '/Permanent address/{print $3}' | tr 'A-F' 'a-f' || true)
+  local iface=${WIFI_IFACE:-wlp2s0}
+  mac=$(ethtool -P "$iface" 2>/dev/null | awk '/Permanent address/{print $3}' | tr 'A-F' 'a-f' || true)
   if validmac "$mac"; then printf '%s\n' "$mac"; return 0; fi
-  mac=$(cat /sys/class/net/wlp2s0/address 2>/dev/null | tr 'A-F' 'a-f' || true)
+  mac=$(cat "/sys/class/net/$iface/address" 2>/dev/null | tr 'A-F' 'a-f' || true)
   if validmac "$mac"; then printf '%s\n' "$mac"; return 0; fi
   return 1
 }
@@ -167,7 +169,7 @@ preflight(){
       say 'Installer will generate a stable, locally administered Wi-Fi address.'
     fi
   else
-    say 'Eligible for experimental Touch Bar installation. Audio and Wi-Fi calibration are excluded.'
+    say 'Touch Bar installation available. Run mbp132-support testing for audio and Wi-Fi eligibility.'
   fi
   say 'PASS: platform checks. Physical operation requires testing after reboot.'
 }
@@ -234,8 +236,11 @@ install_wifi(){
   [ "$(grep -ic '^macaddr=' "$nvtemp")" = 1 ] || fail 'NVRAM template has no unique MAC field.'
   grep -iq "^macaddr=$mac$" "$nvtemp" || fail 'NVRAM MAC substitution failed.'
   install -d /lib/firmware/brcm
-  install -m644 "$nvtemp" "$FW"
-  sha256sum "$FW" | awk '{print $1}' > "$STATE/backup/installed-nvram.sha256"
+  sha256sum "$nvtemp" | awk '{print $1}' > "$STATE/backup/installed-nvram.sha256"
+  local staged
+  staged=$(mktemp "${FW}.XXXXXX")
+  install -m644 "$nvtemp" "$staged"
+  mv -fT "$staged" "$FW"
   rm -f "$nvtemp"
   say 'Community calibration file installed. Firmware binary, country code and network profiles left unchanged.'
   # Note: Fedora and dracut Ubuntu variants can store firmware in the initramfs.
@@ -265,6 +270,137 @@ install_audio(){
   say 'Installing exact upstream audio PR source (unmerged kernel 7 compatibility).'
   (cd "$src" && bash ./install.cirrus.driver.sh -i)
 }
+audio_match(){
+  local expected codec
+  case "$MODEL" in
+    MacBookPro14,2) expected=0x106b3600;;
+    MacBookPro13,3|MacBookPro14,3) expected=0x106b3900;;
+    *) return 1;;
+  esac
+  for codec in /proc/asound/card*/codec#*; do
+    [ -r "$codec" ] || continue
+    if grep -Fqx 'Vendor Id: 0x10138409' "$codec" && grep -Fqx "Subsystem Id: $expected" "$codec"; then
+      return 0
+    fi
+  done
+  return 1
+}
+wifi_match(){
+  [ "$MODEL" = MacBookPro14,2 ] || return 1
+  local net dev
+  for net in /sys/class/net/*; do
+    dev="$net/device"
+    [ -d "$net/wireless" ] || continue
+    if [ "$(cat "$dev/vendor")" = 0x14e4 ] && [ "$(cat "$dev/device")" = 0x43ba ] &&
+       [ "$(cat "$dev/subsystem_vendor")" = 0x106b ] && [ "$(cat "$dev/subsystem_device")" = 0x0157 ]; then
+      WIFI_IFACE=${net##*/}
+      return 0
+    fi
+  done
+  return 1
+}
+testing(){
+  require_profile
+  say "$MODEL on $KERNEL. Record worked, partial, failed or untested for each item."
+  say 'Touch Bar: check Esc, Fn/F1-F12, brightness and media keys after reboot. Compare camera preview before and after.'
+  say 'Wi-Fi: with stock settings first, try joining, transferring data and reconnecting after reboot on 2.4 and 5 GHz.'
+  say 'Audio: use low desktop volume. Check stereo speakers, headphone insertion/removal and a built-in mic recording separately. Stop playback if distorted.'
+  if [ "$PROFILE" != full ]; then
+    audio_match && say 'Audio trial eligible by codec and subsystem: sudo mbp132-support trial-audio' || say 'Audio trial unavailable: expected codec/subsystem not detected.'
+    wifi_match && say 'If stock Wi-Fi fails: sudo mbp132-support trial-wifi' || say 'Wi-Fi: stock connectivity tests only on this board.'
+    [ ! -d /sys/class/leds/spi::kbd_backlight ] || say 'Optional cold-boot backlight test: sudo mbp132-support trial-backlight'
+  fi
+}
+trial(){
+  local feature=$1 dir="$STATE/trial-$1" src=/usr/src/snd_hda_macbookpro-0.1 answer mac existing
+  root
+  validate
+  lock_install
+  [ "$PROFILE" != full ] || fail 'MacBookPro13,2 uses the existing full profile.'
+  if [ -e "$STATE/attempted" ]; then require_install_model; fi
+  [ ! -e "$dir" ] || fail "Existing trial. Use undo-$feature before retrying."
+  case "$feature" in
+    audio)
+      audio_match || fail 'Cirrus codec and model-specific amplifier subsystem must match.'
+      existing=$(dkms status) || fail 'Cannot inspect DKMS.'
+      [[ "$existing" != *snd_hda_macbookpro* ]] && [ ! -e "$src" ] && [ ! -L "$src" ] || fail 'Existing external audio driver.'
+      case "$(modinfo -k "$KERNEL" -n snd_hda_codec_cs8409)" in
+        /lib/modules/*/kernel/*|/usr/lib/modules/*/kernel/*) ;;
+        *) fail 'Expected the distribution CS8409 module before trial.';;
+      esac
+      say 'Experimental speaker amplifier driver. Use low desktop volume and stop if distorted.';;
+    wifi)
+      wifi_match || fail 'Calibration requires MacBookPro14,2 with Broadcom 14e4:43ba and Apple 106b:0157.'
+      [ ! -L "$FW" ] && { [ ! -e "$FW" ] || [ -f "$FW" ]; } && [ ! -L /etc/dracut.conf.d/mbp132-wifi.conf ] && [ ! -e /etc/dracut.conf.d/mbp132-wifi.conf ] || fail 'Existing custom Wi-Fi setup. Keep the stock test result.'
+      say 'Try this calibration only if stock Wi-Fi failed. Existing calibration will be backed up.';;
+    backlight)
+      [ -d /sys/class/leds/spi::kbd_backlight ] && [ ! -e /etc/udev/rules.d/99-mbp132-keyboard-light.rules ] && [ ! -L /etc/udev/rules.d/99-mbp132-keyboard-light.rules ] || fail 'Backlight control missing or rule already exists.';;
+  esac
+  say "Type TRIAL-${feature^^} to proceed."
+  read -r answer && [ "$answer" = "TRIAL-${feature^^}" ] || fail 'Cancelled.'
+  MBP132_WORKDIR=$(mktemp -d /var/tmp/mbp132-support.XXXXXX)
+  case "$feature" in
+    audio)
+      get_repo "$AUDIO_URL" "$AUDIO_REF" "$MBP132_WORKDIR/source"
+      install_prereqs;;
+    wifi) get_repo "$WIFI_URL" "$WIFI_REF" "$MBP132_WORKDIR/source";;
+  esac
+  mkdir -p "$STATE"
+  mkdir -m 0755 "$dir"
+  printf '%s\n' "$MODEL" > "$dir/model"
+  case "$feature" in
+    audio)
+      mv "$MBP132_WORKDIR/source" "$dir/source"
+      # Require a new exact Ubuntu source check before each kernel rebuild.
+      sed -i 's/^AUTOINSTALL="yes"$/AUTOINSTALL="no"/' "$dir/source/dkms.conf"
+      grep -Fxq 'AUTOINSTALL="no"' "$dir/source/dkms.conf" || fail 'Unexpected DKMS config.'
+      ln -s "$dir/source" "$src"
+      dkms add -m snd_hda_macbookpro -v 0.1
+      dkms install -m snd_hda_macbookpro -v 0.1 -k "$KERNEL";;
+    wifi)
+      local STATE="$dir"
+      mac=$(choosemac)
+      install_wifi "$MBP132_WORKDIR/source" "$mac";;
+    backlight) install_keyboard_backlight;;
+  esac
+  say "Trial installed. Reboot and run mbp132-support testing. Undo with sudo mbp132-support undo-$feature."
+}
+undo_trial(){
+  local feature=$1 dir="$STATE/trial-$1" src=/usr/src/snd_hda_macbookpro-0.1
+  [ -f "$dir/model" ] && [ "$(cat "$dir/model")" = "$MODEL" ] || fail 'No matching trial on this Mac.'
+  case "$feature" in
+    audio)
+      if [ -d /var/lib/dkms/snd_hda_macbookpro/0.1 ]; then
+        [ "$(readlink -f "$src")" = "$dir/source" ] || fail 'Audio source ownership changed.'
+        dkms remove -m snd_hda_macbookpro -v 0.1 --all
+      fi
+      if [ "$(readlink "$src" || true)" = "$dir/source" ]; then rm -f "$src"; fi;;
+    wifi)
+      if [ -f "$dir/backup/installed-nvram.sha256" ]; then
+        if [ -f "$FW" ] && [ "$(sha256sum "$FW" | cut -d' ' -f1)" = "$(cat "$dir/backup/installed-nvram.sha256")" ]; then
+          if [ -f "$dir/backup/original-brcmfmac43602-pcie.txt" ]; then
+            cp -a "$dir/backup/original-brcmfmac43602-pcie.txt" "$FW"
+          else
+            rm -f "$FW"
+          fi
+        elif ! { [ -f "$dir/backup/was-absent" ] && [ ! -e "$FW" ]; } &&
+             ! cmp -s "$dir/backup/original-brcmfmac43602-pcie.txt" "$FW"; then
+          fail "Wi-Fi file changed since trial. Original backup retained in $dir/backup."
+        fi
+        rm -f /etc/dracut.conf.d/mbp132-wifi.conf
+        local image kernel
+        for image in /boot/vmlinuz-*-generic; do
+          [ -f "$image" ] || continue
+          kernel=${image##*/vmlinuz-}
+          if command -v dracut >/dev/null; then dracut --force --kver "$kernel"
+          elif command -v update-initramfs >/dev/null; then update-initramfs -u -k "$kernel"; fi
+        done
+      fi;;
+    backlight) rm -f /etc/udev/rules.d/99-mbp132-keyboard-light.rules;;
+  esac
+  rm -rf -- "$dir"
+  say "Removed $feature trial. Reboot to finish."
+}
 install_all(){
   root
   validate
@@ -273,6 +409,9 @@ install_all(){
   local components=(touch)
   [ ! -e "$STATE/attempted" ] || fail 'Previous installation detected. Check status before repairing or removing it.'
   dkms_state=$(dkms status) || fail 'Cannot inspect existing DKMS installations.'
+  if [ -f "$STATE/trial-audio/model" ] && [ "$(cat "$STATE/trial-audio/model")" = "$MODEL" ]; then
+    dkms_state=$(sed '/^snd_hda_macbookpro\/0\.1[, :]/d' <<< "$dkms_state")
+  fi
   if [[ "${dkms_state,,}" =~ (apple[-_]ib[-_]drv|apple[-_]t1[-_]touchbar|apple[-_]ibridge|apple[-_]touchbar|apple[-_]ib[-_]tb|appletb|snd[-_]hda[-_]macbookpro|snd[-_]hda[-_]codec) ]]; then
     fail 'Existing Apple driver detected in DKMS. Refusing to overlay it.'
   fi
@@ -284,7 +423,7 @@ install_all(){
   else
     confirmation=INSTALL-TOUCHBAR
     say 'Hardware-unverified Touch Bar beta. Changes affect iBridge and may affect its camera interface.'
-    say 'Audio and Wi-Fi calibration are excluded. Keep a working recovery boot option.'
+    say 'Audio and Wi-Fi trials are separate opt-ins. Run mbp132-support testing.'
     for component in apple_ibridge apple_touchbar apple_ib_tb hid_appletb_kbd hid_appletb_bl; do
       [ ! -d "/sys/module/$component" ] || fail "Existing Touch Bar or iBridge module loaded: $component."
     done
@@ -341,6 +480,10 @@ install_all(){
 status(){
   say "Model $(model); Profile $(profile "$(model)"); OS $(os); Kernel $(kernel)"
   say "Installed-state: $([ -e "$STATE/attempted" ] && echo attempted || echo not-run)"
+  local feature
+  for feature in audio wifi backlight; do
+    [ ! -f "$STATE/trial-$feature/model" ] || say "Recorded trial: $feature"
+  done
   say 'DKMS:'
   dkms status 2>/dev/null || true
   say 'Modules:'
@@ -360,6 +503,11 @@ remove_all(){
   root
   require_profile
   lock_install
+  local feature removed=no
+  for feature in audio wifi backlight; do
+    if [ -e "$STATE/trial-$feature" ]; then undo_trial "$feature"; removed=yes; fi
+  done
+  if [ "$removed" = yes ] && [ ! -e "$STATE/attempted" ]; then return; fi
   require_install_model
   [ -e "$STATE/attempted" ] || fail 'No package changes recorded.'
   if [ "$PROFILE" = touchbar-beta ]; then
@@ -406,7 +554,13 @@ repair_modules(){
   root
   validate
   lock_install
-  [ -f "$STATE/attempted" ] || fail 'Nothing to repair; run install on a clean system.'
+  if [ -f "$STATE/trial-audio/model" ]; then
+    [ "$(cat "$STATE/trial-audio/model")" = "$MODEL" ] && audio_match || fail 'Trial hardware mismatch.'
+    install_prereqs
+    dkms install -m snd_hda_macbookpro -v 0.1 -k "$KERNEL"
+    [ -f "$STATE/attempted" ] || return 0
+  fi
+  [ -f "$STATE/attempted" ] || fail 'Nothing to repair.'
   require_install_model
   say "Repair candidate: $MODEL on $KERNEL. A DKMS build does not verify hardware operation."
   local m
@@ -430,6 +584,9 @@ repair_modules(){
   say 'Repair finished. Reboot and verify the installed features.'
 }
 case "${1:-help}" in
+  testing) testing;;
+  trial-audio|trial-wifi|trial-backlight) trial "${1#trial-}";;
+  undo-audio|undo-wifi|undo-backlight) root; require_profile; lock_install; undo_trial "${1#undo-}";;
   preflight) preflight;;
   install) install_all;;
   protect) root; /usr/lib/mbp132-support/fallback protect;;
@@ -437,7 +594,8 @@ case "${1:-help}" in
   status) status;;
   remove) remove_all;;
   help|-h|--help) cat <<'DOC'
-MacBook T1 Support v0.6.0 Beta
+MacBook T1 Support v0.6.1 Beta
+  mbp132-support testing         # three test groups and eligible trial commands
   sudo mbp132-support preflight  # read-only compatibility checks
   sudo mbp132-support install    # install the model-specific profile after confirmation
   mbp132-support status          # inspect driver builds and kernel warnings
@@ -448,7 +606,7 @@ MacBook T1 Support v0.6.0 Beta
 Ubuntu 26.04 amd64, generic 7.0.0 kernel and active T1 iBridge required.
 MacBookPro13,2 uses the existing full profile with experimental audio.
 MacBookPro13,3, MacBookPro14,2 and MacBookPro14,3 are hardware-unverified
-Touch Bar beta candidates. These candidates receive no audio or Wi-Fi patch.
+beta candidates. Run testing for audio, Wi-Fi and backlight trial eligibility.
 
 Wi-Fi NVRAM is a community file. If the permanent Wi-Fi MAC is unavailable,
 a stable locally-administered unicast MAC is generated automatically and saved.

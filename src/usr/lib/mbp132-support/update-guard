@@ -6,7 +6,7 @@ STATE=/var/lib/mbp132-support
 KNOWN=7.0.0-30-generic
 mode=${1:---report}
 [[ "$mode" =~ ^--(apt|boot|report)$ ]] || { echo 'Usage: update-guard --apt|--boot|--report' >&2; exit 2; }
-if [ ! -f "$STATE/attempted" ]; then
+if [ ! -f "$STATE/attempted" ] && [ ! -f "$STATE/trial-audio/model" ]; then
   [ "$mode" = --report ] && echo 'Hardware support not yet installed.'
   exit 0
 fi
@@ -18,8 +18,12 @@ case "$model" in
 esac
 if [ -f "$STATE/install-model" ]; then
   [ "$(cat "$STATE/install-model")" = "$model" ] || exit 0
-elif [ "$model" != MacBookPro13,2 ]; then
+elif [ -f "$STATE/attempted" ] && [ "$model" != MacBookPro13,2 ]; then
   exit 0
+fi
+if [ -f "$STATE/trial-audio/model" ] && [ "$(cat "$STATE/trial-audio/model")" = "$model" ]; then
+  if [ ! -f "$STATE/attempted" ]; then modules=(); fi
+  modules+=(snd_hda_macbookpro)
 fi
 issues=()
 lines=()

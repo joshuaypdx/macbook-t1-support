@@ -1,4 +1,4 @@
-# MacBook T1 Support 0.6.0 beta source
+# MacBook T1 Support 0.6.1 beta source
 
 The Debian package retains the `mbp132-support` package and command name for upgrades. See the [installation guide](../docs/INSTALL.md) and [compatibility table](../docs/COMPATIBILITY.md).
 

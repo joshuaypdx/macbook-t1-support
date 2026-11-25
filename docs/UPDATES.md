@@ -10,6 +10,8 @@ Ubuntu's ordinary security and application updates are important. **Don't perman
 - A successful DKMS compile does **not** guarantee the rebuilt drivers work after reboot.
 - Users must install new versions of `mbp132-support` manually. **GitHub releases are not an APT repository and do not silently update users.**
 
+The optional 0.6.1 audio trial uses manual rebuilds. Boot the target kernel and run `sudo mbp132-support repair` to check the detected codec and exact Ubuntu kernel source before building.
+
 ## Practical advice for this beta
 
 Keep a backup, preserve a known-working kernel and avoid `apt autoremove` until you've confirmed an alternative boot path. If a later kernel causes sound/Touch Bar problems, select a previously working kernel from Ubuntu's advanced boot choices if available and report the regression. Do not run `sudo mbp132-support repair` on a kernel that actively crashes or fails to boot.

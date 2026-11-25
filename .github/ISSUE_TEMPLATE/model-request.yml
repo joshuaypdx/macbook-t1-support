@@ -5,7 +5,7 @@ labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
-      value: "Use this form to request coverage outside the 0.6.0 compatibility table. For tests on an eligible model, use the success or bug report form."
+      value: "Use this form to request coverage outside the 0.6.1 compatibility table. For tests on an eligible model, use the success or bug report form."
   - type: input
     id: model
     attributes:

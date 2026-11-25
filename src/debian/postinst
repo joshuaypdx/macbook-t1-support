@@ -6,7 +6,7 @@ if [ "${1:-}" = configure ]; then
   if [ -f /var/lib/mbp132-support/attempted ]; then
     /usr/lib/mbp132-support/fallback protect || echo 'MBP13,2: fallback protection unavailable. Check: mbp132-support status'
   fi
-  echo 'MacBook T1 Support 0.6.0 installed. Run mbp132-support preflight.'
+  echo 'MacBook T1 Support 0.6.1 installed. Run mbp132-support preflight.'
   echo 'DKMS already auto-rebuilds for new kernels; update monitor now checks results.'
   echo 'Run mbp132-support status for the health report (not proof of hardware runtime).'
 fi

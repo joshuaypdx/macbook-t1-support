@@ -7,15 +7,17 @@
 **MacBook T1 Support** is a community-made installer for hardware that doesn't work fully with an ordinary Ubuntu installation on certain older MacBooks. It brings together established community work for the **Touch Bar, internal sound, and Broadcom Wi-Fi** in one guided setup.
 
 > [!IMPORTANT]
-> **0.6.0 beta.** The existing full install is available on **MacBookPro13,2**. **MacBookPro13,3, MacBookPro14,2 and MacBookPro14,3** are eligible for a hardware-unverified **Touch Bar-only preview**.
+> **0.6.1 beta.** The existing full install is available on **MacBookPro13,2**. **MacBookPro13,3, MacBookPro14,2 and MacBookPro14,3** are eligible for a hardware-unverified **Touch Bar and audio trials**, plus stock Wi-Fi testing. MacBookPro14,2 can also opt into a board-checked Wi-Fi calibration trial.
 
 ## Start here (no Linux expertise required)
 
 **What you need:** Ubuntu **26.04 LTS**, an [eligible T1 MacBook Pro](docs/COMPATIBILITY.md), an internet connection, and a backup of important files. We tested v0.5.0 on a fresh, updated Ubuntu 26.04.1 installation running kernel `7.0.0-43-generic` on one real MacBookPro13,2.
 
+Earlier releases: [0.6.0 Beta](../../releases/tag/v0.6.0-beta.1) · [0.5.0 Beta](../../releases/tag/v0.5.0-beta.1)
+
 ### 1. Download the installer
 
-**[Download MacBook T1 Support 0.6.0 Beta (.deb)](packages/mbp132-support_0.6.0_all.deb?raw=1)**
+**[Download MacBook T1 Support 0.6.1 Beta (.deb)](packages/mbp132-support_0.6.1_all.deb?raw=1)**
 
 If GitHub shows a file page instead of downloading, click **Download raw file**. Save the file in **Downloads**. You don't need the source-code ZIPs that GitHub displays automatically.
 
@@ -24,7 +26,7 @@ If GitHub shows a file page instead of downloading, click **Download raw file**.
 Copy this line, paste it into Ubuntu's **Terminal**, and press Return:
 
 ```bash
-sudo apt install ~/Downloads/mbp132-support_0.6.0_all.deb
+sudo apt install ~/Downloads/mbp132-support_0.6.1_all.deb
 ```
 
 Ubuntu will ask for your computer password. **The password will not appear as you type.** That's normal. This first step installs the support utility; it **does not install the hardware drivers yet**.
@@ -43,13 +45,13 @@ If it says **PASS**, continue. If it says **STOPPED**, don't force it. [Ask for 
 sudo mbp132-support install
 ```
 
-Read the profile and warning. Type **`INSTALL`** for the full MacBookPro13,2 setup or **`INSTALL-TOUCHBAR`** for the other three candidates. The preview installs the pinned Touch Bar/iBridge driver using matching kernel headers. Audio and Wi-Fi calibration are excluded from the preview. Keep a recovery boot option available.
+Read the profile and warning. Type **`INSTALL`** for the full MacBookPro13,2 setup or **`INSTALL-TOUCHBAR`** for the other three candidates. The preview installs the pinned Touch Bar/iBridge driver using matching kernel headers. Run `mbp132-support testing` for the model-specific audio and Wi-Fi options. Keep a recovery boot option available.
 
 When the installer says the steps have completed, **reboot**. Keep external GPUs disconnected during this initial test.
 
 ### 5. Test the hardware
 
-On the Touch Bar preview, try **Esc, Fn/F1–F12, media keys and the FaceTime camera**. Check that the keyboard and trackpad still work. On MacBookPro13,2, also check speakers, microphone and Wi-Fi. Then run:
+Run **`mbp132-support testing`** on any eligible Mac for the Touch Bar, Wi-Fi and audio checklist. [Feature trial commands and rollback](docs/INSTALL.md#individual-trials). Check the camera before and after Touch Bar setup. Report keyboard or trackpad regressions. Then run:
 
 ```bash
 mbp132-support status
@@ -68,14 +70,14 @@ Share a [test report](../../issues/new/choose) for a success, failure or preflig
 
 MacBook T1 Support is being developed for Apple's 2016–2017 MacBook Pro models equipped with the T1 chip.
 
-The table shows each model’s 0.6.0 install profile and prior project hardware evidence.
+The table shows each model’s 0.6.1 install profile and prior project hardware evidence.
 
 | MacBook Pro model | Model identifier | Status |
 | --- | --- | --- |
 | 13-inch Late 2016, Touch Bar | MacBookPro13,2 | Full profile. v0.5.0 tested on one machine |
-| 15-inch Late 2016, Touch Bar | MacBookPro13,3 | Touch Bar-only preview. Hardware-unverified |
-| 13-inch Mid 2017, Touch Bar | MacBookPro14,2 | Touch Bar-only preview. Hardware-unverified |
-| 15-inch Mid 2017, Touch Bar | MacBookPro14,3 | Touch Bar-only preview. Hardware-unverified |
+| 15-inch Late 2016, Touch Bar | MacBookPro13,3 | Touch Bar, optional audio, stock Wi-Fi. Hardware-unverified |
+| 13-inch Mid 2017, Touch Bar | MacBookPro14,2 | Touch Bar, optional audio and board-checked Wi-Fi calibration. Hardware-unverified |
+| 15-inch Mid 2017, Touch Bar | MacBookPro14,3 | Touch Bar, optional audio, stock Wi-Fi. Hardware-unverified |
 
 ---
 
@@ -87,7 +89,7 @@ The table shows each model’s 0.6.0 install profile and prior project hardware 
 - **Storage:** External Samsung T9 SSD
 - **Verified hardware:** Touch Bar, internal speakers, microphone, FaceTime HD camera, keyboard, trackpad and Wi-Fi
 
-**Important:** This is the v0.5.0 hardware baseline. The 0.6.0 package has offline test coverage and needs fresh hardware testing. Keep the installer’s model checks in place.
+**Important:** This is the v0.5.0 hardware baseline. The 0.6.1 package has offline test coverage and needs fresh hardware testing. Keep the installer’s model checks in place.
 
 MacBook Pro models without a T1 chip, and newer models equipped with Apple's T2 chip, are outside the current scope.
 

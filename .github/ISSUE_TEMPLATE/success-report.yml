@@ -26,9 +26,9 @@ body:
         - label: "Built-in speakers played audio"
         - label: "Microphone recorded sound"
         - label: "Touch Bar/function keys responded"
-        - label: "Wi-Fi connected to a network"
-        - label: "Keyboard and trackpad worked"
-        - label: "Camera worked"
+        - label: "Wi-Fi joined, transferred data and reconnected (include band in notes)"
+        - label: "Headphone jack switched and played audio"
+        - label: "Camera preview worked after Touch Bar setup"
   - type: textarea
     id: notes
     attributes:

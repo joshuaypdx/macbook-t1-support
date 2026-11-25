@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1 Beta
+
+- Test Touch Bar, Wi-Fi and audio across all four T1 models with the new testing command.
+- Opt into subsystem-matched audio on preview models, board-checked calibration on MacBookPro14,2 and optional keyboard backlight. Each trial has its own rollback command.
+- Preserve existing full and Touch Bar installations during package upgrade.
+
 ## 0.6.0 Beta
 
 - Add model-specific preflight and a separately confirmed Touch Bar preview for MacBookPro13,3, MacBookPro14,2 and MacBookPro14,3.

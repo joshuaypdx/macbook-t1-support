@@ -1,4 +1,4 @@
-MacBook T1 Support 0.6.0 beta
+MacBook T1 Support 0.6.1 beta
 
 Ubuntu 26.04 LTS, amd64, generic 7.0.0 kernel and active T1 iBridge.
 
@@ -6,7 +6,7 @@ MacBookPro13,2 retains the full profile with Touch Bar, experimental sound
 and board-specific Wi-Fi calibration. Hardware evidence is from v0.5.0.
 
 MacBookPro13,3, MacBookPro14,2 and MacBookPro14,3 are hardware-unverified
-Touch Bar preview models. Their profile excludes audio and Wi-Fi patches.
+Touch Bar preview models. Run mbp132-support testing for opt-in audio and board-specific Wi-Fi eligibility.
 The camera shares the iBridge and should be tested after reboot.
 
 Start with sudo mbp132-support preflight. Read the model and profile

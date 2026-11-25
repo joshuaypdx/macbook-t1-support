@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "New beta tag, e.g. v0.6.0-beta.1"
+        description: "New beta tag, e.g. v0.6.1-beta.1"
         required: true
-        default: "v0.6.0-beta.1"
+        default: "v0.6.1-beta.1"
         type: string
 
 permissions:
@@ -23,8 +23,9 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta(\.[0-9]+)?$ ]] || { echo 'Tag must be like v0.6.0-beta.1'; exit 1; }
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta(\.[0-9]+)?$ ]] || { echo 'Tag must be like v0.6.1-beta.1'; exit 1; }
           python3 src/tests/test_package.py
+          python3 src/tests/test_trials.py
           python3 tests/verify-release.py
           VERSION=$(sed -n 's/^Version: //p' src/debian/control)
           TAG_VERSION="${RELEASE_TAG#v}"
